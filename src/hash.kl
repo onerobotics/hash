@@ -1,0 +1,217 @@
+PROGRAM hash
+%NOLOCKGROUP
+CONST
+TABLE_SIZE = 128
+
+%INCLUDE includes/hashtypes.h
+
+VAR
+	table : ARRAY[TABLE_SIZE] OF hashEntry
+	myTable : ARRAY[TABLE_SIZE] OF HashNode
+	stable : ARRAY[TABLE_SIZE] OF STRING[16]
+
+ROUTINE get(key : INTEGER) : INTEGER
+VAR
+	h : INTEGER
+BEGIN
+	h = (key MOD TABLE_SIZE)+1
+	WHILE ((table[h].init <> true) AND (table[h].key <> key)) DO
+		h = ((h + 1) MOD TABLE_SIZE)+1
+	ENDWHILE
+	WRITE('found key', key, 'here: ', h, CR)
+	IF (table[h].init = false) THEN
+		RETURN(-1)
+	ELSE
+		RETURN(table[h].val)
+	ENDIF
+END get
+
+ROUTINE put(key : INTEGER; value : INTEGER)
+VAR
+	h : INTEGER
+BEGIN
+	h = (key MOD TABLE_SIZE)+1
+	WRITE('key', key, 'h', h, CR)
+	WHILE ((table[h].init <> false) AND (table[h].key <> key)) DO
+		h = (h + 1) MOD TABLE_SIZE
+	ENDWHILE
+	WRITE('putting key', key, 'here: ', h, CR)
+	table[h].key = h
+	table[h].val = value
+	table[h].init = true
+END put
+
+ROUTINE init
+VAR
+	i : INTEGER
+BEGIN
+	FOR i = 1 TO TABLE_SIZE DO
+		table[i].key = 0
+		table[i].init = false
+		table[i].val = 0
+	ENDFOR
+END init
+
+ROUTINE sfold(s : STRING) : INTEGER
+VAR
+	intLength : INTEGER
+	sum : INTEGER
+	j : INTEGER
+	c : STRING[4]
+	mult : INTEGER
+	k : INTEGER
+	sl : INTEGER
+BEGIN
+	intLength = TRUNC(STR_LEN(s) / 4)
+	--WRITE('intlength: ', intLength, CR)
+	sum = 0
+	FOR j = 1 TO intLength DO
+		sl = 4
+		IF STR_LEN(s) < 4 THEN
+			sl = STR_LEN(s)
+		ENDIF
+		c = SUB_STR(s, ((j-1)*4)+1, sl)
+		--WRITE('s: ', s, CR)
+		--WRITE('c: ', c, CR)
+		mult = 1
+		sl = 4
+		IF STR_LEN(s)<4 THEN
+			sl = STR_LEN(s)
+		ENDIF
+		FOR k=1 TO sl DO
+			WRITE('k: ', k, CR)
+			WRITE('sum: ', sum, CR)
+			WRITE('c: ', c, CR)
+			WRITE('mult: ', mult, CR)
+			sum = sum + ord(c, k) * mult
+			mult = mult*256
+		ENDFOR
+	ENDFOR
+
+	RETURN(ABS(sum) MOD TABLE_SIZE)
+END sfold
+
+ROUTINE djb2(str : STRING) : INTEGER
+VAR
+	hash : INTEGER
+	i    : INTEGER
+	char : INTEGER
+BEGIN
+	hash = 5381
+	FOR i=1 TO STR_LEN(str) DO
+		char = ORD(str, i)
+		hash = hash * 33 + char
+	ENDFOR
+	RETURN(hash)
+END djb2
+
+-- From Java 1.5 string library
+ROUTINE jsStrHash(str : STRING) : INTEGER
+VAR
+	hash : INTEGER
+	i    : INTEGER
+BEGIN
+	hash = 0
+	FOR i=1 TO STR_LEN(str) DO
+		hash = (31 * hash) + ord(str, i)
+	ENDFOR
+	RETURN(hash)
+END jsStrHash
+
+ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF HashNode)
+VAR
+	h     : INTEGER
+	index : INTEGER
+	break : BOOLEAN
+BEGIN
+	h = jsStrHash(key)
+	index = h MOD ARRAY_LEN(tbl)
+	WRITE('h: ', h, ', index: ', index, CR)
+
+	break = false
+	REPEAT
+		WRITE('repeat...', index, CR)
+		IF UNINIT(tbl[index].key) THEN
+			tbl[index].key = ''
+		ENDIF
+		IF UNINIT(tbl[index].deleted) THEN
+			tbl[index].deleted = false
+		ENDIF
+
+		IF ((tbl[index].key=key) OR (tbl[index].key='') OR (tbl[index].deleted=true)) THEN
+			break = true
+		ELSE
+			index = index + 1
+			IF index > ARRAY_LEN(tbl) THEN
+				index = 1
+			ENDIF
+		ENDIF
+	UNTIL break = true
+
+	WRITE('found empty slot @ ', index, CR)
+	tbl[index].key = key
+	tbl[index].val = value
+	tbl[index].deleted = false
+END hPut
+
+ROUTINE hGet(key : STRING; tbl : ARRAY OF HashNode) : STRING
+VAR
+	h : INTEGER
+	index : INTEGER
+	break : BOOLEAN
+BEGIN
+	h = jsStrHash(key)
+	index = h MOD ARRAY_LEN(tbl)
+	WRITE('h: ', h, ', index: ', index, CR)
+	break = false
+	REPEAT
+		WRITE('repeat...', index, CR)
+		IF UNINIT(tbl[index].key) THEN
+			tbl[index].key = ''
+		ENDIF
+		IF UNINIT(tbl[index].deleted) THEN
+			tbl[index].deleted = false
+		ENDIF
+		IF (
+			(tbl[index].key=key) OR
+			(tbl[index].deleted=true) OR
+			(tbl[index].key='')) THEN
+			break = true
+		ELSE
+			index = index + 1
+			IF index > ARRAY_LEN(tbl) THEN
+				index = 1
+			ENDIF
+		ENDIF
+	UNTIL break=true
+
+	IF tbl[index].key=key THEN
+		RETURN(tbl[index].val)
+	ELSE
+		RETURN('')
+	ENDIF
+END hGet
+
+
+BEGIN
+	WRITE('foo',CR)
+	init
+	put(1, 45)
+	put(512, 12)
+	put(2, 1111)
+	WRITE('1: ', get(1), CR)
+	WRITE('512: ', get(512), CR)
+	WRITE('2: ', get(2), CR)
+
+	WRITE('abcd: ', sfold('abcd'), CR)
+	WRITE('bcde: ', sfold('bcde'), CR)
+	WRITE('ABCD: ', sfold('ABCD'), CR)
+	WRITE('a:    ', sfold('a'), CR)
+	WRITE('b:    ', sfold('b'), CR)
+
+	hput('a', 'b', myTable)
+	WRITE('getting a: ', hGet('a', myTable))
+	hput('From', 'someuser', myTable)
+	WRITE('getting From: ', hGet('From', myTable))
+
+END hash

@@ -1,0 +1,5 @@
+ROUTINE get(key : INTEGER) : INTEGER FROM hash
+ROUTINE put(key : INTEGER; value : INTEGER) FROM hash
+ROUTINE sfold(s : STRING) : INTEGER FROM hash
+ROUTINE djb2(str : STRING) : INTEGER FROM hash
+ROUTINE jsStrHash(str : STRING) : INTEGER FROM hash

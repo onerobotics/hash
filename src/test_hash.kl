@@ -1,0 +1,19 @@
+PROGRAM test_hash
+%NOLOCKGROUP
+
+%INCLUDE includes/kunit.h
+%INCLUDE includes/hash.h
+
+BEGIN
+	kunit_test('djb2("a")', kunit_eq_int(177670, djb2('a')))
+	kunit_test('djb2("asdf")', kunit_eq_int(2090088131, djb2('asdf')))
+	kunit_test('jsStrHash("a")', kunit_eq_int(97, jsStrHash('a')))
+	kunit_test('jsStrHash("asdf")', kunit_eq_int(3003444, jsStrHash('asdf')))
+	kunit_test('jsStrHash("a really really really long string")', kunit_eq_int(1765648255, jsStrHash('a really really really long string')))
+	--kunit_test('djb2("really long string")', kunit_eq_int((-3 022 999 531), djb2('really long string')))
+	--i = 2147483647
+	--i = -2147483647
+
+
+	kunit_done
+END test_hash
