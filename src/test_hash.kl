@@ -1,5 +1,7 @@
 PROGRAM test_hash
 %NOLOCKGROUP
+CONST
+	%INCLUDE includes/hash.c
 
 TYPE
 	%INCLUDE includes/hash.t
