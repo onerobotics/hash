@@ -5,92 +5,6 @@ TABLE_SIZE = 128
 
 %INCLUDE includes/hashtypes.h
 
-VAR
-	table : ARRAY[TABLE_SIZE] OF hashEntry
-	myTable : ARRAY[TABLE_SIZE] OF HashNode
-	stable : ARRAY[TABLE_SIZE] OF STRING[16]
-
-ROUTINE get(key : INTEGER) : INTEGER
-VAR
-	h : INTEGER
-BEGIN
-	h = (key MOD TABLE_SIZE)+1
-	WHILE ((table[h].init <> true) AND (table[h].key <> key)) DO
-		h = ((h + 1) MOD TABLE_SIZE)+1
-	ENDWHILE
-	WRITE('found key', key, 'here: ', h, CR)
-	IF (table[h].init = false) THEN
-		RETURN(-1)
-	ELSE
-		RETURN(table[h].val)
-	ENDIF
-END get
-
-ROUTINE put(key : INTEGER; value : INTEGER)
-VAR
-	h : INTEGER
-BEGIN
-	h = (key MOD TABLE_SIZE)+1
-	WRITE('key', key, 'h', h, CR)
-	WHILE ((table[h].init <> false) AND (table[h].key <> key)) DO
-		h = (h + 1) MOD TABLE_SIZE
-	ENDWHILE
-	WRITE('putting key', key, 'here: ', h, CR)
-	table[h].key = h
-	table[h].val = value
-	table[h].init = true
-END put
-
-ROUTINE init
-VAR
-	i : INTEGER
-BEGIN
-	FOR i = 1 TO TABLE_SIZE DO
-		table[i].key = 0
-		table[i].init = false
-		table[i].val = 0
-	ENDFOR
-END init
-
-ROUTINE sfold(s : STRING) : INTEGER
-VAR
-	intLength : INTEGER
-	sum : INTEGER
-	j : INTEGER
-	c : STRING[4]
-	mult : INTEGER
-	k : INTEGER
-	sl : INTEGER
-BEGIN
-	intLength = TRUNC(STR_LEN(s) / 4)
-	--WRITE('intlength: ', intLength, CR)
-	sum = 0
-	FOR j = 1 TO intLength DO
-		sl = 4
-		IF STR_LEN(s) < 4 THEN
-			sl = STR_LEN(s)
-		ENDIF
-		c = SUB_STR(s, ((j-1)*4)+1, sl)
-		--WRITE('s: ', s, CR)
-		--WRITE('c: ', c, CR)
-		mult = 1
-		sl = 4
-		IF STR_LEN(s)<4 THEN
-			sl = STR_LEN(s)
-		ENDIF
-		FOR k=1 TO sl DO
-			WRITE('k: ', k, CR)
-			WRITE('sum: ', sum, CR)
-			WRITE('c: ', c, CR)
-			WRITE('mult: ', mult, CR)
-			sum = sum + ord(c, k) * mult
-			mult = mult*256
-		ENDFOR
-	ENDFOR
-
-	RETURN(ABS(sum) MOD TABLE_SIZE)
-END sfold
-
 ROUTINE djb2(str : STRING) : INTEGER
 VAR
 	hash : INTEGER
@@ -118,7 +32,15 @@ BEGIN
 	RETURN(hash)
 END jsStrHash
 
-ROUTINE hGetIndex(key : STRING; tbl : ARRAY OF HashNode) : INTEGER
+ROUTINE hModHash(key : STRING; len : INTEGER) : INTEGER
+VAR
+	hash : INTEGER
+BEGIN
+	hash = jsStrHash(key)
+	RETURN(hash MOD len + 1)
+END hModHash
+
+ROUTINE hGetIndex(key : STRING; get : BOOLEAN; tbl : ARRAY OF hashNode) : INTEGER
 VAR
 	hash      : INTEGER
 	tblLength : INTEGER
@@ -131,17 +53,23 @@ BEGIN
 
 	FOR count=0 TO tblLength DO
 		IF UNINIT(tbl[index].key) THEN tbl[index].key = ''; ENDIF
-		IF UNINIT(tbl[index].deleted) THEN tbl[index].deleted = false; ENDIF
 
-		IF ((tbl[index].key=key) OR       -- key already exists
-			(tbl[index].deleted=true) OR  -- key is deleted
-			(tbl[index].key='')) THEN     -- key is empty
-			RETURN(index)
-		ELSE
-			index = index + 1
-			IF index > tblLength THEN
-				index = 1
+		IF get THEN
+			-- get requests require key=key
+			IF ((tbl[index].key=key)) THEN
+				RETURN(index)
 			ENDIF
+		ELSE
+			-- put requests require key=key or empty
+			IF ((tbl[index].key=key) OR
+				(tbl[index].key='')) THEN
+				RETURN(index)
+			ENDIF
+		ENDIF
+
+		index = index + 1
+		IF index > tblLength THEN
+			index = 1
 		ENDIF
 	ENDFOR
 
@@ -150,35 +78,47 @@ BEGIN
 END hGetIndex
 
 
-ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF HashNode) : BOOLEAN
+ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF hashNode) : BOOLEAN
 VAR
 	index : INTEGER
 BEGIN
-	WRITE('hPut(', key, ')', CR)
-	index = hGetIndex(key, tbl)
+	index = hGetIndex(key, false, tbl)
+	WRITE('hPut(', key, ') @ ', index, CR)
 	IF index > 0 THEN
 		tbl[index].key = key
 		tbl[index].val = value
-		tbl[index].deleted = false
 		RETURN(TRUE)
 	ELSE
-		WRITE('table full', CR)
 		RETURN(FALSE)
 	ENDIF
 END hPut
 
-ROUTINE hGet(key : STRING; tbl : ARRAY OF HashNode) : STRING
+ROUTINE hGet(key : STRING; tbl : ARRAY OF hashNode) : STRING
 VAR
 	index : INTEGER
 BEGIN
-	WRITE('hGet(', key, ')', CR)
-	index = hGetIndex(key, tbl)
+	index = hGetIndex(key, true, tbl)
 	IF index > 0 THEN
 		RETURN(tbl[index].val)
-	ELSE
-		RETURN('')
 	ENDIF
+
+	RETURN('')
 END hGet
+
+ROUTINE hDel(key : STRING; tbl : ARRAY OF hashNode) : BOOLEAN
+VAR
+	index : INTEGER
+BEGIN
+	index = hGetIndex(key, true, tbl)
+	IF index > 0 THEN
+		IF ((tbl[index].key=key)) THEN
+			tbl[index].key = ''
+			RETURN(TRUE)
+		ENDIF
+	ENDIF
+
+	RETURN(FALSE)
+END hDel
 
 ROUTINE hashPut(key : STRING; value : STRING; tblProg : STRING; tblName : STRING) : BOOLEAN
 VAR
@@ -193,6 +133,14 @@ VAR
 BEGIN
 	RETURN (hGet(key, BYNAME(tblProg, tblName, entry)))
 END hashGet
+
+ROUTINE hashDel(key : STRING; tblProg : STRING; tblName : STRING) : BOOLEAN
+VAR
+	entry : INTEGER
+BEGIN
+	RETURN (hDel(key, BYNAME(tblProg, tblName, entry)))
+END hashDel
+
 
 BEGIN
 END hash

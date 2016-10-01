@@ -1,13 +1,5 @@
 TYPE
-	hashEntry FROM hash = STRUCTURE
-		key  : INTEGER
-		val  : INTEGER
-		init : BOOLEAN
+	hashNode FROM hash = STRUCTURE
+		key     : STRING[16]
+		val     : STRING[16]
 	ENDSTRUCTURE
-
-	HashNode FROM hash = STRUCTURE
-		key : STRING[16]
-		val : STRING[16]
-		deleted : BOOLEAN
-	ENDSTRUCTURE
-	

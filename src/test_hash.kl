@@ -7,6 +7,7 @@ CONST
 
 VAR
 	smallTable : ARRAY[1] OF hashNode
+	twoTable   : ARRAY[2] OF hashNode
 	testTable : ARRAY[TABLE_SIZE] OF hashNode
 
 %INCLUDE includes/kunit.h
@@ -18,26 +19,39 @@ VAR
 BEGIN
 	smallTable[1].key = ''
 	smallTable[1].val = ''
-	smallTable[1].deleted = true
+
+	FOR i=1 TO 2 DO
+		twoTable[i].key = ''
+		twoTable[i].val = ''
+	ENDFOR
 
 	FOR i=1 TO TABLE_SIZE DO
 		testTable[i].key = ''
 		testTable[i].val = ''
-		testTable[i].deleted = true
 	ENDFOR
 END clearTables
+
+-- private methods
+ROUTINE djb2(str : STRING) : INTEGER FROM hash
+ROUTINE jsStrHash(str : STRING) : INTEGER FROM hash
+ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF hashNode) : BOOLEAN FROM hash
+ROUTINE hGet(key : STRING; tbl : ARRAY OF hashNode) : STRING FROM hash
+ROUTINE hDel(key : STRING; tbl : ARRAY OF hashNode) : BOOLEAN FROM hash
+ROUTINE hModHash(key : STRING; len : INTEGER) : INTEGER FROM hash
+ROUTINE hGetIndex(key : STRING; get : BOOLEAN; tbl : ARRAY OF hashNode) : INTEGER FROM hash
+
 BEGIN
 	kunit_test('djb2("a")', kunit_eq_int(177670, djb2('a')))
 	kunit_test('djb2("asdf")', kunit_eq_int(2090088131, djb2('asdf')))
+	-- djb2 overflows INTEGER
+	--kunit_test('djb2("really long string")', kunit_eq_int((-3 022 999 531), djb2('really long string')))
+
 	kunit_test('jsStrHash("a")', kunit_eq_int(97, jsStrHash('a')))
 	kunit_test('jsStrHash("asdf")', kunit_eq_int(3003444, jsStrHash('asdf')))
 	kunit_test('jsStrHash("a really really really long string")', kunit_eq_int(1765648255, jsStrHash('a really really really long string')))
-	--kunit_test('djb2("really long string")', kunit_eq_int((-3 022 999 531), djb2('really long string')))
-	--i = 2147483647
-	--i = -2147483647
 
 	clearTables
-	kunit_test('hashGet with empty table returns null string', kunit_eq_str('', hashGet('foo', 'test_hash', 'smallTable')))
+	kunit_test('hashGet with empty table returns empty string', kunit_eq_str('', hashGet('foo', 'test_hash', 'smallTable')))
 
 	kunit_test('put returns true', kunit_assert(hashPut('foo', 'bar', 'test_hash', 'smallTable')))
 	kunit_test('hashPut puts a value', kunit_eq_str('bar', hashGet('foo', 'test_hash', 'smallTable')))
@@ -48,6 +62,18 @@ BEGIN
 	-- can't put this... table full
 	kunit_test('put returns false when full', NOT(kunit_assert(hashPut('bar', 'foo', 'test_hash', 'smallTable'))))
 	kunit_test('hashPut does not put if tbl full', kunit_eq_str('', hashGet('bar', 'test_hash', 'smallTable')))
+
+	kunit_test('hashDel returns true if it deletes key', kunit_assert(hashDel('foo', 'test_hash', 'smallTable')))
+	kunit_test('hashDel actually deletes', kunit_eq_str('', hashGet('foo', 'test_hash', 'smallTable')))
+	kunit_test('hashDel returns false if it cannot find the key', NOT(kunit_assert(hashDel('asdfasdf', 'test_hash', 'smallTable'))))
+
+	-- test collisions
+	kunit_test('mod hash of a is 2', kunit_eq_int(2, hModHash('a', 2)))
+	kunit_test('mod hash of c is 2', kunit_eq_int(2, hModHash('c', 2)))
+	kunit_test('index of a is 2', kunit_eq_int(2, hGetIndex('a', false, twoTable)))
+	kunit_test('index of c is 2 normally', kunit_eq_int(2, hGetIndex('c', false, twoTable)))
+	kunit_test('put a', kunit_assert(hashPut('a', 'foo', 'test_hash', 'twoTable')))
+	kunit_test('index of c is 1 if 2 is full', kunit_eq_int(1, hGetIndex('c', false, twoTable)))
 
 	kunit_done
 END test_hash
