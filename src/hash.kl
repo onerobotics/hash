@@ -124,6 +124,8 @@ ROUTINE hashPut(key : STRING; value : STRING; tblProg : STRING; tblName : STRING
 VAR
 	entry : INTEGER
 BEGIN
+	IF (key='') THEN RETURN(FALSE); ENDIF
+
 	RETURN(hPut(key, value, BYNAME(tblProg, tblName, entry)))
 END hashPut
 
@@ -131,6 +133,8 @@ ROUTINE hashGet(key : STRING; tblProg : STRING; tblName : STRING) : STRING
 VAR
 	entry : INTEGER
 BEGIN
+	IF (key='') THEN RETURN(''); ENDIF
+
 	RETURN (hGet(key, BYNAME(tblProg, tblName, entry)))
 END hashGet
 

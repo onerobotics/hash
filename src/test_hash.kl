@@ -52,6 +52,8 @@ BEGIN
 
 	clearTables
 	kunit_test('hashGet with empty table returns empty string', kunit_eq_str('', hashGet('foo', 'test_hash', 'smallTable')))
+	kunit_test('hashPut with empty string returns false', kunit_assert(NOT(hashPut('', 'foo', 'test_hash', 'smallTable'))))
+	kunit_test('hashGet with empty string returns empty string', kunit_eq_str('', hashGet('', 'test_hash', 'smallTable')))
 
 	kunit_test('put returns true', kunit_assert(hashPut('foo', 'bar', 'test_hash', 'smallTable')))
 	kunit_test('hashPut puts a value', kunit_eq_str('bar', hashGet('foo', 'test_hash', 'smallTable')))
