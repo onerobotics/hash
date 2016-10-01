@@ -1,7 +1,5 @@
 PROGRAM hash
 %NOLOCKGROUP
-CONST
-TABLE_SIZE = 128
 
 TYPE
 	%INCLUDE includes/hash.t

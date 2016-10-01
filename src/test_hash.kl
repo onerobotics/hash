@@ -1,7 +1,5 @@
 PROGRAM test_hash
 %NOLOCKGROUP
-CONST
-	TABLE_SIZE = 128
 
 TYPE
 	%INCLUDE includes/hash.t
@@ -9,7 +7,6 @@ TYPE
 VAR
 	smallTable : ARRAY[1] OF hashNode
 	twoTable   : ARRAY[2] OF hashNode
-	testTable : ARRAY[TABLE_SIZE] OF hashNode
 
 %INCLUDE includes/kunit.h
 %INCLUDE includes/hash.h
@@ -24,11 +21,6 @@ BEGIN
 	FOR i=1 TO 2 DO
 		twoTable[i].key = ''
 		twoTable[i].val = ''
-	ENDFOR
-
-	FOR i=1 TO TABLE_SIZE DO
-		testTable[i].key = ''
-		testTable[i].val = ''
 	ENDFOR
 END clearTables
 
