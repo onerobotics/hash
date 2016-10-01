@@ -3,7 +3,8 @@ PROGRAM hash
 CONST
 TABLE_SIZE = 128
 
-%INCLUDE includes/hashtypes.h
+TYPE
+	%INCLUDE includes/hash.t
 
 ROUTINE djb2(str : STRING) : INTEGER
 VAR

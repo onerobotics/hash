@@ -1,5 +1,0 @@
-TYPE
-	hashNode FROM hash = STRUCTURE
-		key     : STRING[16]
-		val     : STRING[16]
-	ENDSTRUCTURE

@@ -3,7 +3,8 @@ PROGRAM test_hash
 CONST
 	TABLE_SIZE = 128
 
-%INCLUDE includes/hashtypes.h
+TYPE
+	%INCLUDE includes/hash.t
 
 VAR
 	smallTable : ARRAY[1] OF hashNode
