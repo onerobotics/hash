@@ -142,6 +142,8 @@ ROUTINE hashDel(key : STRING; tblProg : STRING; tblName : STRING) : BOOLEAN
 VAR
 	entry : INTEGER
 BEGIN
+	IF (key='') THEN RETURN(FALSE); ENDIF
+
 	RETURN (hDel(key, BYNAME(tblProg, tblName, entry)))
 END hashDel
 
