@@ -84,7 +84,6 @@ VAR
 	index : INTEGER
 BEGIN
 	index = hGetIndex(key, false, tbl)
-	WRITE('hPut(', key, ') @ ', index, CR)
 	IF index > 0 THEN
 		tbl[index].key = key
 		tbl[index].val = value
