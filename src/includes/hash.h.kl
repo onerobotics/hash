@@ -3,3 +3,8 @@ ROUTINE put(key : INTEGER; value : INTEGER) FROM hash
 ROUTINE sfold(s : STRING) : INTEGER FROM hash
 ROUTINE djb2(str : STRING) : INTEGER FROM hash
 ROUTINE jsStrHash(str : STRING) : INTEGER FROM hash
+ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF HashNode) : BOOLEAN FROM hash
+ROUTINE hGet(key : STRING; tbl : ARRAY OF HashNode) : STRING FROM hash
+ROUTINE hashPut(key : STRING; value : STRING; tblProg : STRING; tblName : STRING) : BOOLEAN FROM hash
+ROUTINE hashGet(key : STRING; tblProg : STRING; tblName : STRING) : STRING FROM hash
+

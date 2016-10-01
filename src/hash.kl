@@ -118,100 +118,81 @@ BEGIN
 	RETURN(hash)
 END jsStrHash
 
-ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF HashNode)
+ROUTINE hGetIndex(key : STRING; tbl : ARRAY OF HashNode) : INTEGER
 VAR
-	h     : INTEGER
-	index : INTEGER
-	break : BOOLEAN
+	hash      : INTEGER
+	tblLength : INTEGER
+	index     : INTEGER
+	count     : INTEGER
 BEGIN
-	h = jsStrHash(key)
-	index = h MOD ARRAY_LEN(tbl)
-	WRITE('h: ', h, ', index: ', index, CR)
+	hash = jsStrHash(key)
+	tblLength = ARRAY_LEN(tbl)
+	index = hash MOD tblLength + 1
 
-	break = false
-	REPEAT
-		WRITE('repeat...', index, CR)
-		IF UNINIT(tbl[index].key) THEN
-			tbl[index].key = ''
-		ENDIF
-		IF UNINIT(tbl[index].deleted) THEN
-			tbl[index].deleted = false
-		ENDIF
+	FOR count=0 TO tblLength DO
+		IF UNINIT(tbl[index].key) THEN tbl[index].key = ''; ENDIF
+		IF UNINIT(tbl[index].deleted) THEN tbl[index].deleted = false; ENDIF
 
-		IF ((tbl[index].key=key) OR (tbl[index].key='') OR (tbl[index].deleted=true)) THEN
-			break = true
+		IF ((tbl[index].key=key) OR       -- key already exists
+			(tbl[index].deleted=true) OR  -- key is deleted
+			(tbl[index].key='')) THEN     -- key is empty
+			RETURN(index)
 		ELSE
 			index = index + 1
-			IF index > ARRAY_LEN(tbl) THEN
+			IF index > tblLength THEN
 				index = 1
 			ENDIF
 		ENDIF
-	UNTIL break = true
+	ENDFOR
 
-	WRITE('found empty slot @ ', index, CR)
-	tbl[index].key = key
-	tbl[index].val = value
-	tbl[index].deleted = false
+	-- did not find index
+	RETURN(0)
+END hGetIndex
+
+
+ROUTINE hPut(key : STRING; value : STRING; tbl : ARRAY OF HashNode) : BOOLEAN
+VAR
+	index : INTEGER
+BEGIN
+	WRITE('hPut(', key, ')', CR)
+	index = hGetIndex(key, tbl)
+	IF index > 0 THEN
+		tbl[index].key = key
+		tbl[index].val = value
+		tbl[index].deleted = false
+		RETURN(TRUE)
+	ELSE
+		WRITE('table full', CR)
+		RETURN(FALSE)
+	ENDIF
 END hPut
 
 ROUTINE hGet(key : STRING; tbl : ARRAY OF HashNode) : STRING
 VAR
-	h : INTEGER
 	index : INTEGER
-	break : BOOLEAN
 BEGIN
-	h = jsStrHash(key)
-	index = h MOD ARRAY_LEN(tbl)
-	WRITE('h: ', h, ', index: ', index, CR)
-	break = false
-	REPEAT
-		WRITE('repeat...', index, CR)
-		IF UNINIT(tbl[index].key) THEN
-			tbl[index].key = ''
-		ENDIF
-		IF UNINIT(tbl[index].deleted) THEN
-			tbl[index].deleted = false
-		ENDIF
-		IF (
-			(tbl[index].key=key) OR
-			(tbl[index].deleted=true) OR
-			(tbl[index].key='')) THEN
-			break = true
-		ELSE
-			index = index + 1
-			IF index > ARRAY_LEN(tbl) THEN
-				index = 1
-			ENDIF
-		ENDIF
-	UNTIL break=true
-
-	IF tbl[index].key=key THEN
+	WRITE('hGet(', key, ')', CR)
+	index = hGetIndex(key, tbl)
+	IF index > 0 THEN
 		RETURN(tbl[index].val)
 	ELSE
 		RETURN('')
 	ENDIF
 END hGet
 
+ROUTINE hashPut(key : STRING; value : STRING; tblProg : STRING; tblName : STRING) : BOOLEAN
+VAR
+	entry : INTEGER
+BEGIN
+	RETURN(hPut(key, value, BYNAME(tblProg, tblName, entry)))
+END hashPut
+
+ROUTINE hashGet(key : STRING; tblProg : STRING; tblName : STRING) : STRING
+VAR
+	entry : INTEGER
+BEGIN
+	RETURN (hGet(key, BYNAME(tblProg, tblName, entry)))
+END hashGet
 
 BEGIN
-	WRITE('foo',CR)
-	init
-	put(1, 45)
-	put(512, 12)
-	put(2, 1111)
-	WRITE('1: ', get(1), CR)
-	WRITE('512: ', get(512), CR)
-	WRITE('2: ', get(2), CR)
-
-	WRITE('abcd: ', sfold('abcd'), CR)
-	WRITE('bcde: ', sfold('bcde'), CR)
-	WRITE('ABCD: ', sfold('ABCD'), CR)
-	WRITE('a:    ', sfold('a'), CR)
-	WRITE('b:    ', sfold('b'), CR)
-
-	hput('a', 'b', myTable)
-	WRITE('getting a: ', hGet('a', myTable))
-	hput('From', 'someuser', myTable)
-	WRITE('getting From: ', hGet('From', myTable))
-
 END hash

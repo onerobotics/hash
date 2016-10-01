@@ -1,9 +1,31 @@
 PROGRAM test_hash
 %NOLOCKGROUP
+CONST
+	TABLE_SIZE = 128
+
+%INCLUDE includes/hashtypes.h
+
+VAR
+	smallTable : ARRAY[1] OF hashNode
+	testTable : ARRAY[TABLE_SIZE] OF hashNode
 
 %INCLUDE includes/kunit.h
 %INCLUDE includes/hash.h
 
+ROUTINE clearTables
+VAR
+	i : INTEGER
+BEGIN
+	smallTable[1].key = ''
+	smallTable[1].val = ''
+	smallTable[1].deleted = true
+
+	FOR i=1 TO TABLE_SIZE DO
+		testTable[i].key = ''
+		testTable[i].val = ''
+		testTable[i].deleted = true
+	ENDFOR
+END clearTables
 BEGIN
 	kunit_test('djb2("a")', kunit_eq_int(177670, djb2('a')))
 	kunit_test('djb2("asdf")', kunit_eq_int(2090088131, djb2('asdf')))
@@ -14,6 +36,18 @@ BEGIN
 	--i = 2147483647
 	--i = -2147483647
 
+	clearTables
+	kunit_test('hashGet with empty table returns null string', kunit_eq_str('', hashGet('foo', 'test_hash', 'smallTable')))
+
+	kunit_test('put returns true', kunit_assert(hashPut('foo', 'bar', 'test_hash', 'smallTable')))
+	kunit_test('hashPut puts a value', kunit_eq_str('bar', hashGet('foo', 'test_hash', 'smallTable')))
+
+	kunit_test('put works', kunit_assert(hashPut('foo', 'baz', 'test_hash', 'smallTable')))
+	kunit_test('hashPut overwrites', kunit_eq_str('baz', hashGet('foo', 'test_hash', 'smallTable')))
+
+	-- can't put this... table full
+	kunit_test('put returns false when full', NOT(kunit_assert(hashPut('bar', 'foo', 'test_hash', 'smallTable'))))
+	kunit_test('hashPut does not put if tbl full', kunit_eq_str('', hashGet('bar', 'test_hash', 'smallTable')))
 
 	kunit_done
 END test_hash
