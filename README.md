@@ -76,6 +76,8 @@ Then use the `hashPut()`, `hashGet()`, and `hashDel()` routines as necessary:
 You must have ROBOGUIDE installed and the the WinOLPC bin directory
 needs to be on your system $PATH.
 
+Depends on [KUnit](https://github.com/onerobotics/kunit).
+
 1. Download [GnuWin](http://gnuwin32.sourceforge.net) if you don't
    already have it
 2. Clone the repository
